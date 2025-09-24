@@ -6,7 +6,7 @@ This LanceDB server provides a complete solution for creating and managing vecto
 
 ## Key Files Created
 
-1. **`lance_db_server.py`** - Main server implementation with LanceDBManager class and Flask API
+1. **`lance_server.py`** - Main server entry point using modular components
 2. **`test_lance_server.py`** - Comprehensive testing suite for both class and API usage
 3. **`demo_lance_server.py`** - Interactive demo showing all features without dependencies
 4. **`README_LanceDB.md`** - Complete documentation with examples
@@ -24,7 +24,7 @@ pip install -r requirements_lance.txt
 
 ### 2. Basic Usage as Python Class
 ```python
-from lance_db_server import LanceDBManager
+from modules.lance_db_manager import LanceDBManager
 
 # Initialize
 manager = LanceDBManager(db_path="./my_vector_db")
@@ -45,11 +45,11 @@ results = manager.search_similar(
 
 ### 3. Start HTTP Server
 ```bash
-# Default settings (localhost:5000)
-python3 lance_db_server.py
+# Start with default settings
+python3 lance_server.py
 
-# Custom settings
-python3 lance_db_server.py --host 0.0.0.0 --port 8080 --db-path ./custom_db
+# Custom settings  
+python3 lance_server.py --host 0.0.0.0 --port 5000 --db-path ./data/vector_db
 ```
 
 ### 4. Use HTTP API
@@ -145,7 +145,7 @@ LOG_LEVEL=INFO
 
 ### Command Line Arguments
 ```bash
-python3 lance_db_server.py \
+python3 lance_server.py \
   --host 0.0.0.0 \
   --port 5000 \
   --db-path ./my_db \
@@ -206,7 +206,8 @@ def search_all_programs(query, limit=10):
 ```python
 # Dedicated microservice
 from flask import Flask
-from lance_db_server import LanceDBFlaskServer, LanceDBManager
+from modules.lance_db_manager import LanceDBManager
+from modules.flask_server import LanceDBFlaskServer
 
 app = Flask(__name__)
 manager = LanceDBManager(db_path=os.getenv('VECTOR_DB_PATH'))

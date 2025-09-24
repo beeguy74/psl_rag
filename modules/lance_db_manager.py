@@ -1,83 +1,38 @@
 """
-LanceDB Server with Flask HTTP API for PSL RAG Project
+LanceDB Manager - Database operations for PSL RAG Project
 
-This module provides a comprehensive LanceDB management class with Flask HTTP endpoints
-for creating, populating, and querying vector databases using parquet files.
-
-Features:
-- Create new or connect to existing LanceDB databases
-- Populate databases from parquet files with PSL document schema
-- Vector search and similarity queries
-- RESTful API endpoints via Flask
-- Support for both sync and async operations
-- Comprehensive error handling and logging
-
-Usage:
-    # Start the server
-    python lance_db_server.py
-    
-    # Or use as a class
-    from lance_db_server import LanceDBManager
-    manager = LanceDBManager()
-    manager.populate_from_parquet('data.parquet')
+This module handles all LanceDB database operations including:
+- Database connection and management
+- Parquet file ingestion with PSL schema validation
+- Vector search operations
+- Table management (create, delete, info)
+- Embedding generation (mock implementation)
 """
 
 import lancedb
 import pandas as pd
 import pyarrow as pa
 import numpy as np
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
-from flask import Flask, request, jsonify, Response
 import logging
 from datetime import datetime
-import json
-from dataclasses import dataclass, asdict
 import traceback
-from dotenv import load_dotenv
 import os
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
-# Import our schema definitions
-from parquet_schemas import (
-    PSLDocumentRecord, 
-    PANDAS_DTYPES, 
+# Import schema definitions
+from .schemas import (
+    PSLDocumentRecord,
+    SearchResult,
+    DatabaseStats,
     validate_document_record,
-    analyze_parquet_file
+    PANDAS_DTYPES
 )
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SearchResult:
-    """Represents a search result from LanceDB"""
-    id: str
-    score: float
-    source_file: str
-    text: str
-    word_count: int
-    embedding_summary: str
-    
-    
-@dataclass
-class DatabaseStats:
-    """Statistics about the LanceDB database"""
-    total_tables: int
-    table_names: List[str]
-    total_documents: int
-    database_path: str
-    created_at: Optional[str] = None
 
 
 class LanceDBManager:
@@ -473,197 +428,9 @@ class LanceDBManager:
         except Exception as e:
             logger.error(f"Failed to delete table {table_name}: {e}")
             return False
-
-
-class LanceDBFlaskServer:
-    """
-    Flask HTTP server for LanceDB operations.
-    Provides RESTful API endpoints for database management.
-    """
     
-    def __init__(self, db_manager: LanceDBManager = None):
-        """Initialize Flask server with LanceDB manager."""
-        self.app = Flask(__name__)
-        self.db_manager = db_manager or LanceDBManager()
-        self.setup_routes()
-    
-    def setup_routes(self):
-        """Setup Flask routes for API endpoints."""
-        
-        @self.app.route('/health', methods=['GET'])
-        def health_check():
-            """Health check endpoint."""
-            return jsonify({
-                'status': 'healthy',
-                'timestamp': datetime.now().isoformat(),
-                'database_path': self.db_manager.db_path
-            })
-        
-        @self.app.route('/stats', methods=['GET'])
-        def get_stats():
-            """Get database statistics."""
-            try:
-                stats = self.db_manager.get_database_stats()
-                return jsonify(asdict(stats))
-            except Exception as e:
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.route('/tables', methods=['GET'])
-        def list_tables():
-            """List all tables in the database."""
-            try:
-                tables = self.db_manager.list_tables()
-                return jsonify({'tables': tables})
-            except Exception as e:
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.route('/tables/<table_name>', methods=['GET'])
-        def get_table_info(table_name):
-            """Get information about a specific table."""
-            try:
-                info = self.db_manager.get_table_info(table_name)
-                return jsonify(info)
-            except Exception as e:
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.route('/tables/<table_name>', methods=['DELETE'])
-        def delete_table(table_name):
-            """Delete a table."""
-            try:
-                success = self.db_manager.delete_table(table_name)
-                if success:
-                    return jsonify({'message': f'Table {table_name} deleted successfully'})
-                else:
-                    return jsonify({'error': f'Failed to delete table {table_name}'}), 500
-            except Exception as e:
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.route('/ingest', methods=['POST'])
-        def ingest_parquet():
-            """
-            Ingest data from a parquet file.
-            
-            Expected JSON payload:
-            {
-                "parquet_path": "path/to/file.parquet",
-                "table_name": "optional_table_name",
-                "overwrite": false,
-                "batch_size": 100
-            }
-            """
-            try:
-                data = request.get_json()
-                if not data or 'parquet_path' not in data:
-                    return jsonify({'error': 'parquet_path is required'}), 400
-                
-                parquet_path = data['parquet_path']
-                table_name = data.get('table_name')
-                overwrite = data.get('overwrite', False)
-                batch_size = data.get('batch_size', 100)
-                
-                # Validate parquet path exists
-                if not Path(parquet_path).exists():
-                    return jsonify({'error': f'Parquet file not found: {parquet_path}'}), 404
-                
-                # Start ingestion
-                stats = self.db_manager.populate_from_parquet(
-                    parquet_path=parquet_path,
-                    table_name=table_name,
-                    batch_size=batch_size,
-                    overwrite=overwrite
-                )
-                
-                return jsonify({
-                    'message': 'Ingestion completed successfully',
-                    'stats': stats
-                })
-                
-            except Exception as e:
-                logger.error(f"Ingestion failed: {e}")
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.route('/search', methods=['POST'])
-        def search_documents():
-            """
-            Search for similar documents.
-            
-            Expected JSON payload:
-            {
-                "query": "search text",
-                "table_name": "table_to_search",
-                "limit": 10,
-                "score_threshold": 0.0
-            }
-            """
-            try:
-                data = request.get_json()
-                if not data or 'query' not in data or 'table_name' not in data:
-                    return jsonify({'error': 'query and table_name are required'}), 400
-                
-                query = data['query']
-                table_name = data['table_name']
-                limit = data.get('limit', 10)
-                score_threshold = data.get('score_threshold', 0.0)
-                
-                # Perform search
-                results = self.db_manager.search_similar(
-                    query_text=query,
-                    table_name=table_name,
-                    limit=limit,
-                    score_threshold=score_threshold
-                )
-                
-                # Convert results to dictionaries
-                results_dict = [asdict(result) for result in results]
-                
-                return jsonify({
-                    'query': query,
-                    'table_name': table_name,
-                    'total_results': len(results_dict),
-                    'results': results_dict
-                })
-                
-            except Exception as e:
-                logger.error(f"Search failed: {e}")
-                return jsonify({'error': str(e)}), 500
-        
-        @self.app.errorhandler(404)
-        def not_found(error):
-            return jsonify({'error': 'Endpoint not found'}), 404
-        
-        @self.app.errorhandler(500)
-        def internal_error(error):
-            return jsonify({'error': 'Internal server error'}), 500
-    
-    def run(self, host='0.0.0.0', port=5000, debug=False):
-        """Run the Flask server."""
-        logger.info(f"Starting LanceDB Flask server on {host}:{port}")
-        self.app.run(host=host, port=port, debug=debug)
-
-
-def main():
-    """Main function to run the server."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='LanceDB Server with Flask API')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=5000, help='Port to bind to')
-    parser.add_argument('--debug', action='store_true', help='Run in debug mode')
-    parser.add_argument('--db-path', help='Path to LanceDB database')
-    parser.add_argument('--embedding-dim', type=int, default=384, help='Embedding dimension')
-    
-    args = parser.parse_args()
-    
-    # Initialize LanceDB manager
-    db_manager = LanceDBManager(
-        db_path=args.db_path,
-        embedding_dim=args.embedding_dim
-    )
-    
-    # Initialize and run Flask server
-    server = LanceDBFlaskServer(db_manager)
-    server.run(host=args.host, port=args.port, debug=args.debug)
-
-
-if __name__ == '__main__':
-    main()
+    def close(self):
+        """Clean up resources."""
+        if self.executor:
+            self.executor.shutdown(wait=True)
+            logger.info("Database manager cleanup completed")
