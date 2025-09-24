@@ -138,3 +138,5 @@ cython_debug/
 # Custom
 data/*
 !data/questions-benchmark.txt
+
+custom_db/*
