@@ -29,6 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import modular components
+from modules.embedder import Embedder
 from modules.lance_db_manager import LanceDBManager
 from modules.flask_server import LanceDBFlaskServer
 
@@ -73,7 +74,7 @@ Examples:
     
     parser.add_argument('--embedding-dim', 
                        type=int, 
-                       default=384, 
+                       default=786, 
                        help='Embedding vector dimension (default: 384)')
     
     parser.add_argument('--log-level',
@@ -142,7 +143,9 @@ def main():
         logger.info("Initializing LanceDB manager...")
         db_manager = LanceDBManager(
             db_path=args.db_path,
-            embedding_dim=args.embedding_dim
+            embedding_dim=args.embedding_dim,
+            create_if_not_exists=True,
+            embedder=Embedder()
         )
         
         # Get database statistics

@@ -45,8 +45,9 @@ class LanceDBManager:
     
     def __init__(self, 
                  db_path: str = None,
-                 embedding_dim: int = 384,  # Default for sentence-transformers
-                 create_if_not_exists: bool = True):
+                 embedding_dim: int = 768,  # Default for sentence-transformers
+                 create_if_not_exists: bool = True,
+                 embedder=None):
         """
         Initialize LanceDB Manager.
         
@@ -54,11 +55,13 @@ class LanceDBManager:
             db_path: Path to LanceDB database directory
             embedding_dim: Dimension of embedding vectors
             create_if_not_exists: Whether to create database if it doesn't exist
+            embedder: Embedding generator instance
         """
         self.db_path = db_path or os.getenv('LANCEDB_PATH', './lance_db')
         self.embedding_dim = embedding_dim
         self.db = None
         self.executor = ThreadPoolExecutor(max_workers=4)
+        self.embedder = embedder
         
         # Ensure database path exists
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -123,33 +126,6 @@ class LanceDBManager:
             pa.field("created_at", pa.timestamp('ms'))
         ])
     
-    def generate_mock_embedding(self, text: str) -> List[float]:
-        """
-        Generate a mock embedding vector for testing purposes.
-        In production, replace this with actual embedding model.
-        
-        Args:
-            text: Text to generate embedding for
-            
-        Returns:
-            Mock embedding vector
-        """
-        # Simple hash-based mock embedding for consistent results
-        import hashlib
-        hash_obj = hashlib.md5(text.encode())
-        hash_hex = hash_obj.hexdigest()
-        
-        # Convert hex to numbers and normalize
-        numbers = [int(hash_hex[i:i+2], 16) for i in range(0, len(hash_hex), 2)]
-        
-        # Pad or truncate to desired dimension
-        while len(numbers) < self.embedding_dim:
-            numbers.extend(numbers[:self.embedding_dim - len(numbers)])
-        numbers = numbers[:self.embedding_dim]
-        
-        # Normalize to [-1, 1] range
-        embedding = [(num - 127.5) / 127.5 for num in numbers]
-        return embedding
     
     def prepare_document_for_insertion(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -171,8 +147,12 @@ class LanceDBManager:
         if not text_for_embedding:
             text_for_embedding = record.get('text', '')[:1000]  # Limit for performance
         
-        # Generate embedding (replace with actual embedding model in production)
-        embedding = self.generate_mock_embedding(text_for_embedding)
+        # Generate embedding using provided embedder
+        if self.embedder is not None:
+            embedding_response = self.embedder.embed([text_for_embedding], self.embedding_dim)
+            embedding = embedding_response.embeddings[0].values
+        else:
+            raise ValueError("No embedder provided to LanceDBManager")
         
         # Prepare record with all required fields
         # Use timestamp with millisecond precision to avoid LanceDB casting errors
@@ -364,8 +344,12 @@ class LanceDBManager:
             # Open table
             table = self.db.open_table(table_name)
             
-            # Generate query embedding
-            query_embedding = self.generate_mock_embedding(query_text)
+            # Generate query embedding using embedder
+            if self.embedder is not None:
+                embedding_response = self.embedder.embed([query_text], self.embedding_dim)
+                query_embedding = embedding_response.embeddings[0].values
+            else:
+                raise ValueError("No embedder provided to LanceDBManager")
             
             # Perform vector search
             results = (table
