@@ -6,12 +6,20 @@ authors = [
     {name = "NEVEROV iaroslav",email = "beeguy74@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
-    "pandas (>=2.3.2,<3.0.0)"
+    "pandas (>=2.3.2,<3.0.0)",
+    "lancedb (>=0.25.1,<0.26.0)",
+    "google-genai (>=1.38.0,<2.0.0)",
+    "python-dotenv (>=1.1.1,<2.0.0)",
+    "flask (>=3.1.2,<4.0.0)",
+    "flask-cors (>=6.0.1,<7.0.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+lancedb = {allow-prereleases = true}

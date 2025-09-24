@@ -136,4 +136,5 @@ cython_debug/
 .vscode/
 
 # Custom
-data
+data/*
+!data/questions-benchmark.txt

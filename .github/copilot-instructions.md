@@ -116,3 +116,98 @@ When working on the chatbot, ensure responses reflect PSL's multidisciplinary na
 - Handle long filenames with spaces and special characters
 - Implement robust file existence checks before processing
 - Consider case sensitivity in program name matching
+
+## Benchmark Evaluation System
+
+### Benchmark Overview
+
+The project includes a comprehensive benchmark dataset at **`data/questions-benchmark.txt`** containing 70 real student questions that evaluate the RAG chatbot's ability to provide accurate, relevant responses about PSL programs and procedures.
+
+### Question Categories & Patterns
+
+The benchmark covers six main categories of student inquiries:
+
+#### 1. Program Discovery & Recommendations
+- **Pattern**: Students seeking program suggestions based on career goals or interests
+- **Examples**: "Quelles formation pouvez-vous me conseiller pour devenir comédien ?", "Je souhaite travailler dans l'industrie pharmaceutique, quelle formation me conseillez-vous ?"
+- **Key Challenge**: Requires understanding career pathways and matching them to specific PSL programs
+
+#### 2. Admission Requirements & Prerequisites
+- **Pattern**: Questions about BAC specialties, language requirements, and eligibility criteria
+- **Examples**: "Quelles sont spécialités recommandées au BAC pour s'inscrire en Science pour un Monde durable ?", "Faut-il maitriser l'anglais pour postuler au master Science cognitive ?"
+- **Key Challenge**: Extracting specific admission criteria from program data
+
+#### 3. Program Structure & Curriculum Details
+- **Pattern**: Specific questions about course content, schedules, and academic organization
+- **Examples**: "Combien d'heures de maths en science pour un monde durable ?", "C'est quels jours les cours du tronc commun humanité numérique de première année ?"
+- **Key Challenge**: Accessing detailed curriculum information within program parcours
+
+#### 4. Career Outcomes & Progression
+- **Pattern**: Questions about post-graduation opportunities and further studies
+- **Examples**: "Je fais quoi après un master Science cognitive ?", "Est-ce que je peux faire un doctorat après un master SCIENCES DU VIVANT ?"
+- **Key Challenge**: Connecting program content to career prospects and academic pathways
+
+#### 5. Administrative Procedures
+- **Pattern**: Questions about contact information, deadlines, and bureaucratic processes
+- **Examples**: "Qui dois-je contacter pour avoir plus d'informations sur le Master Sciences de l'univers et technologies spatiales ?", "Quelle est la date limite du dépôt des dossiers de mon master ?"
+- **Key Challenge**: Providing accurate administrative details and contact points
+
+#### 6. International Student Support
+- **Pattern**: Questions from international students about procedures and requirements
+- **Examples**: "Je suis un étudiant grec, comment puis-je candidater pau CPES ?", "Can you tell me if master's admissions for this year are still open or not for international students?"
+- **Key Challenge**: Handling multilingual queries and international-specific procedures
+
+### Benchmark Quality Indicators
+
+#### Language Complexity
+- **Multilingual Support**: Questions in both French and English
+- **Natural Language Variations**: Informal phrasing, abbreviations (e.g., "Ca mène à quoi")
+- **Typos & Colloquialisms**: Realistic student language including spelling errors
+
+#### Content Specificity
+- **Named Entities**: Specific programs, professors (e.g., "Thérèse COLLINS"), institutions
+- **Technical Terms**: Academic terminology mixing French and English
+- **Contextual References**: Questions requiring understanding of French higher education system
+
+### Evaluation Guidelines for AI Agents
+
+When developing or testing the RAG system against this benchmark:
+
+#### Response Quality Metrics
+1. **Accuracy**: Factual correctness of information provided
+2. **Completeness**: Coverage of all relevant aspects of the question
+3. **Relevance**: Appropriate scope and focus of the response
+4. **Clarity**: Understandable language appropriate for student audience
+5. **Actionability**: Practical guidance with specific next steps when appropriate
+
+#### Common Failure Patterns to Avoid
+1. **Program Confusion**: Mixing up similar program names or institutions
+2. **Outdated Information**: Providing information that may not be current
+3. **Language Mixing**: Inappropriate code-switching between French and English
+4. **Overgeneralization**: Providing generic advice when specific information is available
+5. **Missing Context**: Failing to consider the broader PSL ecosystem and inter-institutional relationships
+
+#### Testing Strategies
+1. **Systematic Coverage**: Ensure all question categories are addressed in testing
+2. **Edge Case Handling**: Test with questions containing typos or ambiguous phrasing
+3. **Multilingual Consistency**: Verify consistent quality across French and English queries
+4. **Cross-Reference Validation**: Check answers against multiple data sources when available
+5. **User Journey Mapping**: Test sequences of related questions that students might ask
+
+### Implementation Considerations
+
+#### For Retrieval Systems
+- Questions often reference programs by informal names or partial titles
+- Students may ask about programs that don't exist or have been renamed
+- Cross-institutional queries require understanding PSL member school relationships
+
+#### For Generation Systems
+- Responses should maintain appropriate academic tone while being accessible
+- Include relevant disclaimers about contacting official sources for definitive information
+- Handle uncertainty gracefully when information is not available in the dataset
+
+#### For Evaluation Scripts
+- Implement automated metrics for response quality assessment
+- Create rubrics for manual evaluation of complex queries
+- Track performance across different question categories and languages
+- Monitor for bias in responses across different program types or institutions
