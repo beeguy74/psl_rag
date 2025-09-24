@@ -4,6 +4,15 @@
 
 This project builds a student-facing Q&A chatbot using Retrieval-Augmented Generation (RAG) for Paris Sciences & Lettres (PSL) university. The system aggregates and structures official university information including formations, admissions, calendars, and housing data, with improved retrieval quality through synthetic knowledge representations.
 
+## Poetry Dependency Management
+
+This project uses [Poetry](https://python-poetry.org/) for Python dependency management and environment setup. To install dependencies or run scripts, use:
+
+- `poetry install` to install all dependencies
+- `poetry run python <script.py>` to run scripts in the Poetry environment
+
+Refer to `pyproject.toml` for package configuration.
+
 ## Project Structure
 
 ### Core Data Organization
@@ -39,6 +48,35 @@ PROGRAM_TYPE/
 - Synthetic summaries generated for each chunk
 - Used for embeddings in the RAG system
 - Files: `diplomes_etablissements_composantes_data.parquet`, `doctorats_data.parquet`, `licences_data.parquet`, `masters_data.parquet`
+
+## Database Manager & API Server Functionality
+
+### LanceDB Manager (`modules/lance_db_manager.py`)
+
+This module provides a comprehensive interface for managing the LanceDB vector database, including:
+
+- Database connection and initialization
+- Parquet file ingestion with PSL schema validation
+- Table creation, deletion, and info retrieval
+- Batch insertion with embedding generation (requires an embedder instance)
+- Vector similarity search for document retrieval
+- Database statistics and resource cleanup
+
+Usage: Instantiate `LanceDBManager`, configure with a path and embedder, and use its methods for ingestion, search, and table management.
+
+### Flask REST API Server (`modules/flask_server.py`)
+
+This module exposes LanceDB operations via a RESTful HTTP API, including:
+
+- Health check and database stats endpoints
+- Table listing, info, and deletion endpoints
+- Parquet ingestion endpoint (`POST /ingest`)
+- Vector similarity search endpoint (`POST /search`)
+- Error handling and JSON responses
+
+Usage: Instantiate `LanceDBFlaskServer` with a `LanceDBManager` and call `.run()` to start the server. See endpoint documentation in the root API response (`GET /`).
+
+**Note:** All database operations and ingestion require a valid embedder instance for embedding generation.
 
 ## Data Schema
 
@@ -81,10 +119,13 @@ When creating new code:
 - **RAG Components**: Organize embedding, retrieval, and generation logic separately
 - **Configuration**: Use environment variables for model settings and API keys
 - **Documentation**: Document data transformations and processing steps
+- **Database & API**: Place database management and API server code in `modules/`.
+
 
 ### Dependencies & Tools
 
 Expected tech stack (infer from context):
+- **Poetry**: For dependency management and environment setup
 - **Python**: Primary language (evidenced by .gitignore)
 - **Pandas/PyArrow**: For parquet file processing
 - **Transformers/LangChain**: For RAG implementation
@@ -98,6 +139,8 @@ Expected tech stack (infer from context):
 3. **Scalability**: Design for potential addition of new PSL schools and programs
 4. **Error Handling**: Account for inconsistent data availability across programs
 5. **Testing**: Create test cases covering various program types and data completeness scenarios
+6. **API Usage**: Use the Flask server endpoints for database operations and document retrieval.
+7. **Resource Cleanup**: Ensure database manager resources are closed after use.
 
 ### PSL Context
 
